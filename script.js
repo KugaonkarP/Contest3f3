@@ -1,84 +1,118 @@
-// Function to fetch and display the current image of the day
-const apiKey = 'CG0nj6ahg3iJtrsi0d3t3affmdyoE7LZjTHFAWgy'; 
+const API_key = "CG0nj6ahg3iJtrsi0d3t3affmdyoE7LZjTHFAWgy";
+const submit = document.querySelector(".search");
+const searchDate = document.getElementById("search-input");
+const baseUrl = `https://api.nasa.gov/planetary/apod?api_key=${API_key}`;
+const imageTitleDescContainer = document.querySelector(
+  ".current-image-container"
+);
+let searches = [];
+document.querySelector(".welcome").classList.toggle("show");
+document.addEventListener("DOMContentLoaded", function () {
+  setTimeout(() => {
+    document.querySelector(".welcome").classList.toggle("show");
+    document.querySelector(".empty").classList.add("remove-container");
+    setTimeout(() => {
+      document.querySelector(".empty").style.display = "none";
+    }, 2000);
+    document.querySelector(".body-container").style.display = "flex";
+  }, 2000);
+  const currentDate = new Date().toISOString().split("T")[0];
+  console.log(currentDate);
+  getCurrentImageOfTheDay(currentDate);
 
-function getCurrentImageOfTheDay() {
-    const currentDate = new Date().toISOString().split("T")[0];
-    console.log(currentDate)
-    
+  let searchForDate = "";
 
-    fetch(`https://api.nasa.gov/planetary/apod?api_key=${apiKey}&date=${currentDate}`)
-        .then(response => response.json())
-        .then(data => {
-            const currentImageContainer = document.getElementById('current-image-container');
-            currentImageContainer.innerHTML = `
-                <h2>${data.title}</h2>
-                <img src="${data.url}" alt="${data.title}">
-                <p>${data.explanation}</p>
-            `;
-        })
-        .catch(error => console.error(error));
-}
-
-// Function to fetch and display the image for a selected date
-function getImageOfTheDay(date) {
-    
-
-    fetch(`https://api.nasa.gov/planetary/apod?api_key=${apiKey}&date=${date}`)
-        .then(response => response.json())
-        .then(data => {
-            const currentImageContainer = document.getElementById('current-image-container');
-            currentImageContainer.innerHTML = `
-                <h2>${data.title}</h2>
-                <h2>${date}</h2>
-                <img src="${data.url}" alt="${data.title}">
-                <p>${data.explanation}</p>
-            `;
-
-            // Save the date to local storage and add it to the search history
-            saveSearch(date);
-        })
-        .catch(error => console.error(error));
-}
-
-// Function to save a search date to local storage
-function saveSearch(date) {
-    let searches = JSON.parse(localStorage.getItem('searches')) || [];
-    searches.push(date);
-    localStorage.setItem('searches', JSON.stringify(searches));
-
-    // Add the date to the search history
-    addSearchToHistory(date);
-}
-
-// Function to add a search date to the search history
-function addSearchToHistory(date) {
-    const searchHistory = document.getElementById('search-history');
-    const searchItem = document.createElement('a');
-    searchItem.style.display = "block"
-    searchItem.style.marginBottom = "1rem"
-    searchItem.style.textDecoration= "underline"
-
-    searchItem.textContent = date;
-
-    // When a user clicks on a specific list item, fetch and display the data for that date
-    searchItem.addEventListener('click', () => {
-        getImageOfTheDay(date);
-    });
-
-    searchHistory.appendChild(searchItem);
-}
-
-// Event listener for the search form submission
-const searchForm = document.getElementById('search-form');
-searchForm.addEventListener('submit', function (e) {
-    e.preventDefault();
-    const searchInput = document.getElementById('search-input');
-    const selectedDate = searchInput.value;
-
-    if (selectedDate) {
-        getImageOfTheDay(selectedDate);
+  submit.addEventListener("click", (event) => {
+    event.preventDefault();
+    if (searchDate.value) {
+      if (searchDate.value > currentDate) {
+        alert("Please enter a valid date!");
+        return;
+      }
+      searchForDate = searchDate.value;
+      getImageOfTheDay(searchForDate);
     }
-});
+  });
 
-// Load the current image of the day when the page loads
-getCurrentImageOfTheDay();
+  addSearchToHistory();
+
+  function renderImageOnUI(result, defaultPicture) {
+    const img = document.createElement("img");
+    let heading = document.createElement("h1");
+    heading.className = "heading";
+    if (defaultPicture) {
+      heading.innerHTML = "NASA Picture of the Day";
+    } else {
+      heading.innerHTML = `Picture On ${result.date}`;
+    }
+
+    img.className = "image";
+    const titleDesc = document.createElement("div");
+    titleDesc.className = "title-description";
+    titleDesc.innerHTML = `<p class="title">${result.title}</p>
+  <hr>
+          <p class="description">
+          ${result.explanation}
+          </p>`;
+    img.src = result.hdurl;
+    imageTitleDescContainer.append(heading);
+    imageTitleDescContainer.append(img);
+    imageTitleDescContainer.append(titleDesc);
+  }
+
+  async function getCurrentImageOfTheDay(date) {
+    const url = `${baseUrl}&date=${date}`;
+    try {
+      const response = await fetch(url);
+      const result = await response.json();
+      renderImageOnUI(result, true);
+      // console.log(result);
+    } catch (error) {
+      console.log("Some error occurred", error);
+    }
+  }
+  async function getImageOfTheDay(date) {
+    imageTitleDescContainer.innerHTML = "";
+    const url = `${baseUrl}&date=${date}`;
+
+    try {
+      const response = await fetch(url);
+      const result = await response.json();
+      renderImageOnUI(result, false);
+      saveSearch(date);
+    } catch (error) {
+      console.log("Some error occurred", error);
+    }
+  }
+
+  function saveSearch(date) {
+    let searchDate = {
+      date,
+    };
+    searches.push(searchDate);
+    localStorage.setItem("searches", JSON.stringify(searches));
+    addSearchToHistory();
+  }
+
+  function addSearchToHistory() {
+    const ul = document.getElementById("search-history");
+    ul.innerHTML = "";
+    const searches = JSON.parse(localStorage.getItem("searches"));
+    if (searches) {
+      searches.forEach((item) => {
+        const li = document.createElement("li");
+        const anchor = document.createElement("a");
+        anchor.href = "";
+        anchor.innerText = item.date;
+        anchor.addEventListener("click", (event) => {
+          event.preventDefault();
+          getImageOfTheDay(item.date);
+        });
+        li.append(anchor);
+        ul.appendChild(li);
+      });
+    } else {
+      return;
+    }
+  }
+});
